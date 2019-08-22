@@ -5,37 +5,65 @@ require 'net/http'
 
 class CurrencyService
   def initialize()
-    historical(ARGV[0], ARGV[1])
+    puts average(ARGV[0], ARGV[1])
+    #puts historical(ARGV[0], ARGV[1])
   end
+
+  def average(from_date, to_date)
+    all_usd = Array.new
+    all_uf = Array.new
+    currency = historical(from_date, to_date)
+    currency.each do |key, value|
+      all_usd << value[:usd][:today]
+      all_uf << value[:uf][:today]
+    end
+    return hash_result = {
+      :AVGusd => all_usd.sum / all_usd.length,
+      :AVGuf => all_uf.sum / all_uf.length
+    }
+  end
+
   def historical(from_date, to_date)
     currency = Hash.new
     (Date.parse(from_date)..Date.parse(to_date)).each_with_index do |date, i|
       values = getCurrency(date)
-      if i == 0
-        currency[date.to_s] = {
-          :usd => {
-            :today => values[1],
-            :diff => nil
-          },
-          :uf => {
-            :today => values[0],
-            :diff => nil
-          }
-        }
-      else
-        currency[date.to_s] = {
-          :usd => {
-            :today => values[1],
-            :diff => (values[1] - currency[(date - 1).to_s][:usd][:today]).round(2)
-          },
-          :uf => {
-            :today => values[0],
-            :diff => (values[0] - currency[(date - 1).to_s][:uf][:today]).round(2)
-          }
-        }
-      end
+      currency[date.to_s] = {
+         :usd => {
+           :today => values[1],
+           :diff => getDifference(currency, values, date, i, "usd")
+         },
+         :uf => {
+           :today => values[0],
+           :diff => getDifference(currency, values, date, i, "uf")
+         }
+       }
+
+
+      # if i == 0
+      #   currency[date.to_s] = {
+      #     :usd => {
+      #       :today => values[1],
+      #       :diff => nil
+      #     },
+      #     :uf => {
+      #       :today => values[0],
+      #       :diff => nil
+      #     }
+      #   }
+      # else
+      #   currency[date.to_s] = {
+      #     :usd => {
+      #       :today => values[1],
+      #       :diff => (values[1] - currency[(date - 1).to_s][:usd][:today]).round(2)
+      #     },
+      #     :uf => {
+      #       :today => values[0],
+      #       :diff => (values[0] - currency[(date - 1).to_s][:uf][:today]).round(2)
+      #     }
+      #   }
+      # end
     end
-    puts currency
+    return currency
   end
   def getCurrency(date)
     values = []
@@ -61,5 +89,18 @@ class CurrencyService
     end
     return values
   end
+
+  def getDifference(currency, values, date, index, money)
+    if index == 0
+      return nil
+    else
+      if money == "usd"
+        return (values[1] - currency[(date - 1).to_s][:usd][:today]).round(2)
+      else
+        return (values[0] - currency[(date - 1).to_s][:uf][:today]).round(2)
+      end
+    end
+  end
+
 end
 newService = CurrencyService.new()
